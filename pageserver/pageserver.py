@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 
 import socket    # Basic TCP/IP communication on the internet
 import _thread   # Response computation runs concurrently with main program
-
+import os        # For accessing files on computer
 
 def listen(portnum):
     """
@@ -63,6 +63,7 @@ def serve(sock, func):
 # Starter version only serves cat pictures. In fact, only a
 # particular cat picture.  This one.
 ##
+
 CAT = """
      ^ ^
    =(   )=
@@ -88,16 +89,33 @@ def respond(sock):
     request = str(request, encoding='utf-8', errors='strict')
     log.info("--- Received request ----")
     log.info("Request was {}\n***\n".format(request))
+    html_forbid = ['//', '/~', '/..']
+    html_allow = ['.html', '.css']
+    options = get_options()
+    docroot = options.DOCROOT
 
     parts = request.split()
-    if len(parts) > 1 and parts[0] == "GET":
-        transmit(STATUS_OK, sock)
-        transmit(CAT, sock)
+    log.info(str(parts))
+    if len(parts) > 1 and parts[0] == "GET" and any(x in parts[1] for x in html_forbid):
+        transmit(STATUS_FORBIDDEN, sock)
+    elif len(parts) > 1 and parts[0] == "GET" and any(x in parts[1] for x in html_allow):
+        docroot_files = os.listdir(docroot)
+        f_pth = os.getcwd()
+        f_pth = f_pth + '/' + docroot
+
+        file_name = parts[1][1:]
+        log.info(file_name)
+        if file_name in docroot_files:
+            with open((f_pth + file_name), 'r') as f:
+                file_content = f.read()
+            transmit(STATUS_OK, sock)
+            transmit(file_content, sock)
+        else:
+            transmit(STATUS_NOT_FOUND, sock)
     else:
         log.info("Unhandled request: {}".format(request))
         transmit(STATUS_NOT_IMPLEMENTED, sock)
         transmit("\nI don't handle this request: {}\n".format(request), sock)
-
     sock.shutdown(socket.SHUT_RDWR)
     sock.close()
     return
@@ -138,9 +156,13 @@ def get_options():
 def main():
     options = get_options()
     port = options.PORT
+    docroot = options.DOCROOT
     if options.DEBUG:
         log.setLevel(logging.DEBUG)
     sock = listen(port)
+    log.info("Looking for pages in docroot {}".format(docroot))
+    log.info("Confirming directory exists... {}".format(os.path.isdir(docroot)))
+    log.info("Confirming directory contents... {}".format(os.listdir(docroot)))
     log.info("Listening on port {}".format(port))
     log.info("Socket is {}".format(sock))
     serve(sock, respond)
