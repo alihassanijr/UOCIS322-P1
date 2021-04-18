@@ -30,7 +30,7 @@ therefore using a port number above 1000.
 ## Tasks
 
 * Fork this repository to create your own repository on GitHub,
-and make sure it is *PUBLIC*. Be sure to add me as collaborator so I have access.
+and make sure it is *PUBLIC*.
 (Read the documentation as needed, and create an account on GitHub
   if you don't have one.
   You should've already done finished this as part of Project 0.)
